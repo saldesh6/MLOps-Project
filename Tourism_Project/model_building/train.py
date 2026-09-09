@@ -10,9 +10,10 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 # for model serialization and experiment tracking
 import joblib
 import mlflow
+import os
 
-mlflow.set_tracking_uri("http://localhost:5000")   # complete the code to set the MLflow tracking URI
-mlflow.set_experiment("Tourism_Package_Prediction")     # complete the code to set the MLflow experiment name (same as the dev experimentation cell)
+mlflow.set_tracking_uri("http://localhost:5000")   
+mlflow.set_experiment("Tourism_Package_Prediction")     
 
 # Xtrain/Xtest/ytrain/ytest are downloaded from the previous job's artifact
 Xtrain = pd.read_csv("Xtrain.csv")
@@ -20,11 +21,15 @@ Xtest = pd.read_csv("Xtest.csv")
 ytrain = pd.read_csv("ytrain.csv").squeeze()
 ytest = pd.read_csv("ytest.csv").squeeze()
 
-numeric_features = ["Age", "CityTier", "NumberOfPersonVisiting", "PreferredPropertyStar", 
+numeric_features = [
+    "Age", "CityTier", "NumberOfPersonVisiting", "PreferredPropertyStar", 
     "NumberOfTrips", "Passport", "OwnCar", "NumberOfChildrenVisiting", 
-    "MonthlyIncome", "PitchSatisfactionScore", "NumberOfFollowups", "DurationOfPitch"]   # complete the code to list all numerical feature names (same as in prep.py)
+    "MonthlyIncome", "PitchSatisfactionScore", "NumberOfFollowups", "DurationOfPitch"
+]   
 
-categorical_features = ["TypeofContact", "Occupation", "Gender", "MaritalStatus", "Designation", "ProductPitched"]   # complete the code to list all categorical feature names (same as in prep.py)
+categorical_features = [
+    "TypeofContact", "Occupation", "Gender", "MaritalStatus", "Designation", "ProductPitched"
+]   
 
 # Set the class weight to handle class imbalance
 class_weight = ytrain.value_counts()[0] / ytrain.value_counts()[1]
@@ -38,17 +43,16 @@ preprocessor = make_column_transformer(
 xgb_model = xgb.XGBClassifier(scale_pos_weight=class_weight, random_state=42)
 
 # Define hyperparameter grid
-# Fill in suitable values for each parameter based on your understanding of XGBoost tuning.
 param_grid = {
-    'xgbclassifier__n_estimators': [50, 100, 150, 200],        # Number of boosting trees. More trees can improve performance but increase training time.
-    'xgbclassifier__max_depth': [3, 5, 7, 8],           # Maximum depth of each tree. Higher values increase model complexity and risk of overfitting.
-    'xgbclassifier__colsample_bytree': [0.8, 1.0],    # Fraction of features sampled when building each tree.
-    'xgbclassifier__colsample_bylevel': [0.8, 1.0],   # Fraction of features sampled at each tree level.
-    'xgbclassifier__learning_rate': [0.01, 0.1],       # Step size used during boosting. Smaller values may improve generalization but require more trees.
-    'xgbclassifier__reg_lambda': [1.0, 10.0],          # L2 regularization strength. Higher values help reduce overfitting.
+    'xgbclassifier__n_estimators':,        
+    'xgbclassifier__max_depth':,           
+    'xgbclassifier__colsample_bytree': [0.8, 1.0],    
+    'xgbclassifier__colsample_bylevel': [0.8, 1.0],   
+    'xgbclassifier__learning_rate': [0.01, 0.1],       
+    'xgbclassifier__reg_lambda': [1.0, 10.0],          
 }
 # Model pipeline
-model_pipeline = make_pipeline(preprocessor, xgb_model)   # complete the code to build the model pipeline by chaining preprocessor and xgb_model
+model_pipeline = make_pipeline(preprocessor, xgb_model)   
 
 # Start MLflow run
 with mlflow.start_run():
@@ -56,8 +60,7 @@ with mlflow.start_run():
     grid_search = GridSearchCV(model_pipeline, param_grid, cv=5, n_jobs=-1)
     grid_search.fit(Xtrain, ytrain)
 
-    # Log every parameter combination tried during the search as a nested run,
-    # so all experiments can be compared side by side in the MLflow UI
+    # Log every parameter combination tried during the search
     results = grid_search.cv_results_
     for i in range(len(results["params"])):
         with mlflow.start_run(nested=True):
@@ -72,7 +75,7 @@ with mlflow.start_run():
     best_model = grid_search.best_estimator_
 
     # Set classification threshold
-    classification_threshold = 0.5   # Choose a classification threshold between 0 and 1. Lower thresholds typically increase recall and decrease precision and vice versa. Experiment with different values to find the best trade-off.
+    classification_threshold = 0.5    
 
     # Make predictions on the training and test data
     y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
@@ -97,9 +100,15 @@ with mlflow.start_run():
         "test_f1-score": test_report['1']['f1-score']
     })
 
-    # Save the model next to app.py so the Streamlit app can load it directly,
-    # and log it as an MLflow artifact for traceability
-    model_path = "tourism_project/deployment/best_model.joblib"   # Specify the local file path (inside tourism_project/deployment/) where the trained model should be saved.
-    joblib.dump(best_model, model_path)  # complete the code to save the model
+    # Case-insensitive deployment path fallback mapping setup
+    if os.path.exists("Tourism_Project/deployment"):
+        model_path = "Tourism_Project/deployment/best_model.joblib"
+    elif os.path.exists("tourism_project/deployment"):
+        model_path = "tourism_project/deployment/best_model.joblib"
+    else:
+        os.makedirs("Tourism_Project/deployment", exist_ok=True)
+        model_path = "Tourism_Project/deployment/best_model.joblib"
+
+    joblib.dump(best_model, model_path)  
     mlflow.log_artifact(model_path, artifact_path="model")
-    print(f"Model saved to {model_path}")
+    print(f"Model saved successfully to {model_path}")
