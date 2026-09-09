@@ -18,18 +18,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install Dependencies
+      - name: Standardize Folder Structure
         run: |
-          pip install -r Tourism_Project/requirements.txt || pip install -r tourism_project/requirements.txt
+          if [ -d "Tourism_Project" ]; then mv Tourism_Project project_root; else mv tourism_project project_root; fi
+      - name: Install Dependencies
+        run: pip install -r project_root/requirements.txt
       - name: Copy dataset to execution root
-        run: cp Tourism_Project/tourism.csv . || cp tourism_project/tourism.csv . || echo "Dataset already in root"
+        run: cp project_root/tourism.csv . || echo "Dataset already in root"
       - name: Register Dataset
-        run: python Tourism_Project/model_building/data_register.py
+        run: python project_root/model_building/data_register.py
       - name: Upload Registered Dataset
         uses: actions/upload-artifact@v4
         with:
           name: registered-data
-          path: Tourism_Project/tourism.csv
+          path: project_root/tourism.csv
 
   data-prep:
     needs: register-dataset
@@ -39,13 +41,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install Dependencies
+      - name: Standardize Folder Structure
         run: |
-          pip install -r Tourism_Project/requirements.txt || pip install -r tourism_project/requirements.txt
+          if [ -d "Tourism_Project" ]; then mv Tourism_Project project_root; else mv tourism_project project_root; fi
+      - name: Install Dependencies
+        run: pip install -r project_root/requirements.txt
       - name: Copy dataset to execution root
-        run: cp Tourism_Project/tourism.csv . || cp tourism_project/tourism.csv . || echo "Dataset already in root"
+        run: cp project_root/tourism.csv . || echo "Dataset already in root"
       - name: Run Data Preparation
-        run: python Tourism_Project/model_building/prep.py
+        run: python project_root/model_building/prep.py
       - name: Upload Train Test Splits
         uses: actions/upload-artifact@v4
         with:
@@ -64,23 +68,25 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install Dependencies
+      - name: Standardize Folder Structure
         run: |
-          pip install -r Tourism_Project/requirements.txt || pip install -r tourism_project/requirements.txt
+          if [ -d "Tourism_Project" ]; then mv Tourism_Project project_root; else mv tourism_project project_root; fi
+      - name: Install Dependencies
+        run: pip install -r project_root/requirements.txt
       - name: Download Train Test Splits
         uses: actions/download-artifact@v4
         with:
           name: data-splits
       - name: Start MLflow Server
         run: |
-          nohup mlflow ui --host 0.0.0.0 --port 5000 &
+          nohup mlflow ui --host 0.0.0.0 --port 5000 > mlflow.log 2>&1 &
           sleep 5
       - name: Model Building
-        run: python Tourism_Project/model_building/train.py
+        run: python project_root/model_building/train.py
       - name: Commit Trained Model
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@://github.com"
-          git add Tourism_Project/deployment/*.joblib || git add tourism_project/deployment/*.joblib
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add project_root/deployment/*.joblib || echo "No model tracking files found"
           git commit -m "Add trained model [skip ci]" || echo "No changes to commit"
           git push
