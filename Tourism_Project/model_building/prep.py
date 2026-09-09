@@ -1,8 +1,17 @@
-#Use the project folder name, then the folder where model building code will be stored.
+# Use the project folder name, then the folder where model building code will be stored.
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import os
 
-df = pd.read_csv("Tourism_Project/tourism.csv")   # complete the code: path to the registered tourism.csv inside the data folder
+# Fallback path checking: Checks root first (GitHub Actions environment), then falls back to local Colab folder
+if os.path.exists("tourism.csv"):
+    DATA_PATH = "tourism.csv"
+elif os.path.exists("Tourism_Project/tourism.csv"):
+    DATA_PATH = "Tourism_Project/tourism.csv"
+else:
+    DATA_PATH = "tourism.csv"
+
+df = pd.read_csv(DATA_PATH)   
 df.drop(columns=["CustomerID"], inplace=True)   # complete the code: drop the customer identifier column, it is not a predictive feature
 
 # NOTE: categorical columns are intentionally left as raw strings.
@@ -10,13 +19,13 @@ df.drop(columns=["CustomerID"], inplace=True)   # complete the code: drop the cu
 # raw category values. Encoding them here (e.g. LabelEncoder) would make training
 # and serving use different representations, silently breaking predictions.
 
-target = "ProdTaken"  # complete the code to set the name of the column to predict (whether customer purchased the package), 1 if the customer purchased the package, else 0
+target = "ProdTaken"  
 X = df.drop(columns=[target])
 y = df[target]
 
 # stratify keeps the (imbalanced) purchase ratio consistent across splits
 Xtrain, Xtest, ytrain, ytest = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y  # complete the code: which variable should stay balanced across the splits?
+    X, y, test_size=0.2, random_state=42, stratify=y   
 )
 
 Xtrain.to_csv("Xtrain.csv", index=False)
