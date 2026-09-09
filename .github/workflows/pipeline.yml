@@ -36,7 +36,7 @@ jobs:
       - name: Stage 6 - Rebase-Safe Deployment Commit to Main
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@://github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add tourism_project/deployment/best_model.joblib
           git commit -m "Update predictive model checkpoint binaries [skip ci]" || echo "Zero file variant transformations detected."
           git pull origin main --rebase || echo "Branch merge stream aligned."
