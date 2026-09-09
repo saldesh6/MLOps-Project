@@ -100,14 +100,14 @@ with mlflow.start_run():
         "test_f1-score": test_report['1']['f1-score']
     })
 
-    # Case-insensitive deployment path fallback mapping setup
-    if os.path.exists("Tourism_Project/deployment"):
+    # Save the model
+    if os.path.exists("project_root/deployment"):
+        model_path = "project_root/deployment/best_model.joblib"
+    elif os.path.exists("Tourism_Project/deployment"):
         model_path = "Tourism_Project/deployment/best_model.joblib"
-    elif os.path.exists("tourism_project/deployment"):
-        model_path = "tourism_project/deployment/best_model.joblib"
     else:
-        os.makedirs("Tourism_Project/deployment", exist_ok=True)
-        model_path = "Tourism_Project/deployment/best_model.joblib"
+        os.makedirs("project_root/deployment", exist_ok=True)
+        model_path = "project_root/deployment/best_model.joblib"
 
     joblib.dump(best_model, model_path)  
     mlflow.log_artifact(model_path, artifact_path="model")
