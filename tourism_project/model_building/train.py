@@ -24,7 +24,8 @@ numeric_features = [
 ]
 categorical_features = ["TypeofContact", "Occupation", "Gender", "MaritalStatus", "Designation", "ProductPitched"]
 
-class_weight = ytrain.value_counts() / ytrain.value_counts()
+# Calculate the single numeric class ratio to balance the datasets smoothly
+class_weight = ytrain.value_counts()[0] / ytrain.value_counts()[1]
 
 preprocessor = make_column_transformer(
     (StandardScaler(), numeric_features),
@@ -32,10 +33,10 @@ preprocessor = make_column_transformer(
 )
 xgb_model = xgb.XGBClassifier(scale_pos_weight=class_weight, random_state=42)
 
-# REPAIRED: Clean, fully-populated parameter arrays to fix the SyntaxErrors
+# FIXED: Fully populated grid options to clear the SyntaxError completely
 param_grid = {
-    'xgbclassifier__n_estimators':,
-    'xgbclassifier__max_depth':,
+    'xgbclassifier__n_estimators':[50, 100, 150, 200],
+    'xgbclassifier__max_depth':[2, 3, 5, 7],
     'xgbclassifier__colsample_bytree': [0.8, 1.0],
     'xgbclassifier__learning_rate': [0.01, 0.1]
 }
@@ -48,11 +49,10 @@ with mlflow.start_run():
     mlflow.log_params(grid_search.best_params_)
     best_model = grid_search.best_estimator_
     
-    # Standardized lowercase storage mapping sequence
     output_dir = "tourism_project/deployment"
     os.makedirs(output_dir, exist_ok=True)
     model_path = os.path.join(output_dir, "best_model.joblib")
     
     joblib.dump(best_model, model_path)
     mlflow.log_artifact(model_path, artifact_path="model")
-    print(f"✓ Training routine finalized. Binary package saved to: {model_path}")
+    print(f"✓ Model built and saved successfully to: {model_path}")
