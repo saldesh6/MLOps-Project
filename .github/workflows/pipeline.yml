@@ -20,9 +20,7 @@ jobs:
         run: pip install -r tourism_project/requirements.txt
         
       - name: Stage 2 - Execute Dataset Registration Schema
-        run: |
-          cp tourism_project/data/tourism.csv . || echo "Tracking package data fallback mapping clean"
-          python tourism_project/model_building/data_register.py
+        run: python tourism_project/model_building/data_register.py
           
       - name: Stage 3 - Process Partition Matrix Splits
         run: python tourism_project/model_building/prep.py
