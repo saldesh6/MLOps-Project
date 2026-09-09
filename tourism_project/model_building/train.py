@@ -24,7 +24,8 @@ numeric_features = [
 ]
 categorical_features = ["TypeofContact", "Occupation", "Gender", "MaritalStatus", "Designation", "ProductPitched"]
 
-class_weight = ytrain.value_counts() / ytrain.value_counts()
+# FIXED: Explicit numeric indexers force a single decimal scalar value
+class_weight = ytrain.value_counts()[0] / ytrain.value_counts()[1]
 
 preprocessor = make_column_transformer(
     (StandardScaler(), numeric_features),
