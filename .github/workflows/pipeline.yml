@@ -1,93 +1,45 @@
 name: Tourism Project Pipeline
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-
-  register-dataset:
+  mlops-automated-workflow:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Standardize Folder Structure
+          
+      - name: Stage 1 - Compile Production Packages
+        run: pip install -r tourism_project/requirements.txt
+        
+      - name: Stage 2 - Execute Dataset Registration Schema
         run: |
-          if [ -d "Tourism_Project" ]; then mv Tourism_Project project_root; else mv tourism_project project_root; fi
-      - name: Install Dependencies
-        run: pip install -r project_root/requirements.txt
-      - name: Copy dataset to execution root
-        run: cp project_root/tourism.csv . || echo "Dataset already in root"
-      - name: Register Dataset
-        run: python project_root/model_building/data_register.py
-      - name: Upload Registered Dataset
-        uses: actions/upload-artifact@v4
-        with:
-          name: registered-data
-          path: project_root/tourism.csv
-
-  data-prep:
-    needs: register-dataset
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Standardize Folder Structure
-        run: |
-          if [ -d "Tourism_Project" ]; then mv Tourism_Project project_root; else mv tourism_project project_root; fi
-      - name: Install Dependencies
-        run: pip install -r project_root/requirements.txt
-      - name: Copy dataset to execution root
-        run: cp project_root/tourism.csv . || echo "Dataset already in root"
-      - name: Run Data Preparation
-        run: python project_root/model_building/prep.py
-      - name: Upload Train Test Splits
-        uses: actions/upload-artifact@v4
-        with:
-          name: data-splits
-          path: |
-            Xtrain.csv
-            Xtest.csv
-            ytrain.csv
-            ytest.csv
-
-  model-traning:
-    needs: data-prep
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Standardize Folder Structure
-        run: |
-          if [ -d "Tourism_Project" ]; then mv Tourism_Project project_root; else mv tourism_project project_root; fi
-      - name: Install Dependencies
-        run: pip install -r project_root/requirements.txt
-      - name: Download Train Test Splits
-        uses: actions/download-artifact@v4
-        with:
-          name: data-splits
-      - name: Start MLflow Server
+          cp tourism_project/data/tourism.csv . || echo "Tracking package data fallback mapping clean"
+          python tourism_project/model_building/data_register.py
+          
+      - name: Stage 3 - Process Partition Matrix Splits
+        run: python tourism_project/model_building/prep.py
+        
+      - name: Stage 4 - Spawn Live Background MLflow UI Instance
         run: |
           nohup mlflow ui --host 0.0.0.0 --port 5000 > mlflow.log 2>&1 &
           sleep 5
-      - name: Model Building
-        run: python project_root/model_building/train.py
-      - name: Commit Trained Model
+          
+      - name: Stage 5 - Hyperparameter Tuning & Training Execution
+        run: python tourism_project/model_building/train.py
+        
+      - name: Stage 6 - Rebase-Safe Deployment Commit to Main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@://github.com"
-          git add project_root/deployment/*.joblib || echo "No model tracking files found"
-          git commit -m "Add trained model [skip ci]" || echo "No changes to commit"
-          git pull origin main --rebase || echo "No remote adjustments to merge"
+          git add tourism_project/deployment/best_model.joblib
+          git commit -m "Update predictive model checkpoint binaries [skip ci]" || echo "Zero file variant transformations detected."
+          git pull origin main --rebase || echo "Branch merge stream aligned."
           git push
