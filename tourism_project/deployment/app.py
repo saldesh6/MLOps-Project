@@ -3,9 +3,9 @@ import joblib
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Visit with Us - Wellness Tourism Predictor", layout="centered")
+st.set_page_config(page_title="Visit with Us - Tourism Predictor", layout="centered")
 st.title("Visit with Us 🗺️")
-st.subheader("Tourism Package Prediction Dashboard / Analytics Tool")
+st.subheader("Tourism Package Prediction Dashboard")
 st.write("Input customer metrics below to evaluate purchase probability.")
 
 model_path = os.path.join(os.path.dirname(__file__), "best_model.joblib")
@@ -20,11 +20,18 @@ except FileNotFoundError:
     st.error("Could not locate the model file binaries. Please verify your pipeline runs.")
     st.stop()
 
+# FIXED: Standardized path lookup mechanism to find tourism.csv flawlessly on Streamlit Cloud
 @st.cache_data
 def load_baseline_data():
-    root_csv_path = os.path.join(os.path.dirname(__file__), "../../tourism.csv")
-    if os.path.exists(root_csv_path):
-        return pd.read_csv(root_csv_path)
+    possible_paths = [
+        "tourism.csv",
+        "../tourism.csv",
+        "../../tourism.csv",
+        os.path.join(os.getcwd(), "tourism.csv")
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            return pd.read_csv(path)
     return None
 
 df_base = load_baseline_data()
@@ -63,6 +70,12 @@ ProductPitched = st.selectbox("Product Pitched", ["Wellness", "Basic", "Deluxe",
 NumberOfFollowups = st.slider("Number of Follow-ups Conducted", 0, 10, 3)
 
 if st.button("Evaluate Potential Purchase", type="primary"):
+    numeric_features = [
+        "Age", "CityTier", "NumberOfPersonVisiting", "PreferredPropertyStar",
+        "NumberOfTrips", "Passport", "OwnCar", "NumberOfChildrenVisiting",
+        "MonthlyIncome", "PitchSatisfactionScore", "NumberOfFollowups", "DurationOfPitch"
+    ]
+    
     input_data = pd.DataFrame([{
         "Age": Age, "TypeofContact": TypeofContact, "CityTier": CityTier,
         "DurationOfPitch": DurationOfPitch, "Occupation": Occupation, "Gender": Gender,
@@ -89,10 +102,8 @@ if st.button("Evaluate Potential Purchase", type="primary"):
         xgb_step = model.named_steps['xgbclassifier']
         ct_step = model.named_steps['columntransformer']
         
-        # Extract features transformed by OneHotEncoder
         encoded_cats = ct_step.named_transformers_['onehotencoder'].get_feature_names_out()
-        numeric_cols = numeric_features
-        all_features = list(numeric_cols) + list(encoded_cats)
+        all_features = list(numeric_features) + list(encoded_cats)
         
         importance_df = pd.DataFrame({
             'Feature': all_features,
@@ -100,13 +111,21 @@ if st.button("Evaluate Potential Purchase", type="primary"):
         }).sort_values(by='Weight', ascending=False).head(5)
         
         st.bar_chart(data=importance_df, x='Feature', y='Weight', horizontal=True)
-    except Exception:
-        pass
+    except Exception as e:
+        st.info(f"Feature rendering skipped: {str(e)}")
         
     if df_base is not None:
         st.write("### 📊 Demographic Context & Purchase Trends")
+        
         st.write(f"#### Monthly Income Breakdown by Occupation for **{Designation}s**")
         filtered_df = df_base[df_base['Designation'] == Designation]
         if not filtered_df.empty:
             income_chart = filtered_df.groupby('Occupation')['MonthlyIncome'].mean().reset_index()
             st.bar_chart(data=income_chart, x='Occupation', y='MonthlyIncome')
+        
+        st.write("#### Package Purchase Conversion Ratios Across Designations")
+        conversion_chart = df_base.groupby('Designation')['ProdTaken'].mean().reset_index()
+        conversion_chart['Conversion %'] = conversion_chart['ProdTaken'] * 100
+        st.line_chart(data=conversion_chart, x='Designation', y='Conversion %')
+    else:
+        st.info("Baseline data parsing pending. Upload tourism.csv to enable trend analytics graphs.")
