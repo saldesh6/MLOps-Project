@@ -36,7 +36,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     Age = st.number_input("Age", min_value=18, max_value=100, value=35)
-    CityTier = st.selectbox("City Tier",)
+    CityTier = st.selectbox("City Tier", [1, 2, 3], help="Tier 1 > Tier 2 > Tier 3 development standards")
     Occupation = st.selectbox("Occupation", ["Salaried", "Small Business", "Large Business", "Freelancer"])
     Gender = st.selectbox("Gender", ["Male", "Female"])
 
@@ -44,7 +44,7 @@ with col2:
     MaritalStatus = st.selectbox("Marital Status", ["Single", "Married", "Divorced", "Unmarried"])
     Designation = st.selectbox("Designation", ["Executive", "Manager", "Senior Manager", "AVP", "VP"])
     MonthlyIncome = st.number_input("Monthly Income (Gross)", min_value=0, value=25000)
-    OwnCar = st.selectbox("Owns a Car?",, format_func=lambda x: "Yes" if x == 1 else "No")
+    OwnCar = st.selectbox("Owns a Car?", [1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
 
 st.write("### Trip Details & Historical Interactions")
 col3, col4 = st.columns(2)
@@ -56,8 +56,8 @@ with col3:
     NumberOfTrips = st.number_input("Average Annual Trips Taken", min_value=0, value=3)
 
 with col4:
-    Passport = st.selectbox("Has Valid Passport?",, format_func=lambda x: "Yes" if x == 1 else "No")
-    PreferredPropertyStar = st.selectbox("Preferred Hotel Property Star Rating",, index=0)
+    Passport = st.selectbox("Has Valid Passport?", [1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+    PreferredPropertyStar = st.selectbox("Preferred Hotel Property Star Rating", [3, 4, 5], index=0)
     DurationOfPitch = st.number_input("Duration of Sales Pitch (Minutes)", min_value=0, value=15)
     PitchSatisfactionScore = st.slider("Pitch Satisfaction Score", 1, 5, 3)
 
@@ -75,7 +75,7 @@ if st.button("Evaluate Potential Purchase", type="primary"):
         "Designation": Designation, "MonthlyIncome": MonthlyIncome, "PitchSatisfactionScore": PitchSatisfactionScore
     }])
     
-    prediction_proba = model.predict_proba(input_data)
+    prediction_proba = model.predict_proba(input_data)[0][1]
     prediction = 1 if prediction_proba >= 0.5 else 0
     
     st.write("---")
