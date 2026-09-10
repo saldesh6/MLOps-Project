@@ -5,7 +5,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Visit with Us - Wellness Tourism Predictor", layout="centered")
 st.title("Visit with Us 🗺️")
-st.subheader("Wellness Tourism Package Prediction Dashboard")
+st.subheader("Tourism Package Prediction Dashboard / Analytics Tool")
 st.write("Input customer metrics below to evaluate purchase probability.")
 
 # Safely load the pre-trained machine learning model artifact 
