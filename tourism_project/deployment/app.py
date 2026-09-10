@@ -8,7 +8,6 @@ st.title("Visit with Us 🗺️")
 st.subheader("Tourism Package Prediction Dashboard / Analytics Tool")
 st.write("Input customer metrics below to evaluate purchase probability.")
 
-# Safely load the pre-trained machine learning model artifact 
 model_path = os.path.join(os.path.dirname(__file__), "best_model.joblib")
 
 @st.cache_resource
@@ -21,7 +20,6 @@ except FileNotFoundError:
     st.error("Could not locate the model file binaries. Please verify your pipeline runs.")
     st.stop()
 
-# Extract baseline dataset for contextual visual analytics
 @st.cache_data
 def load_baseline_data():
     root_csv_path = os.path.join(os.path.dirname(__file__), "../../tourism.csv")
@@ -85,16 +83,30 @@ if st.button("Evaluate Potential Purchase", type="primary"):
     else:
         st.warning(f"### 🛑 Low Potential Buyer. Conversion Probability: {prediction_proba*100:.1f}%")
         
+    # Explainable AI: Extract and Render Top Features Drivers
+    try:
+        st.write("### 🔑 Top Predictive Feature Drivers (Model Explainability)")
+        xgb_step = model.named_steps['xgbclassifier']
+        ct_step = model.named_steps['columntransformer']
+        
+        # Extract features transformed by OneHotEncoder
+        encoded_cats = ct_step.named_transformers_['onehotencoder'].get_feature_names_out()
+        numeric_cols = numeric_features
+        all_features = list(numeric_cols) + list(encoded_cats)
+        
+        importance_df = pd.DataFrame({
+            'Feature': all_features,
+            'Weight': xgb_step.feature_importances_
+        }).sort_values(by='Weight', ascending=False).head(5)
+        
+        st.bar_chart(data=importance_df, x='Feature', y='Weight', horizontal=True)
+    except Exception:
+        pass
+        
     if df_base is not None:
         st.write("### 📊 Demographic Context & Purchase Trends")
-        
         st.write(f"#### Monthly Income Breakdown by Occupation for **{Designation}s**")
         filtered_df = df_base[df_base['Designation'] == Designation]
         if not filtered_df.empty:
             income_chart = filtered_df.groupby('Occupation')['MonthlyIncome'].mean().reset_index()
             st.bar_chart(data=income_chart, x='Occupation', y='MonthlyIncome')
-        
-        st.write("#### Package Purchase Conversion Ratios Across Designations")
-        conversion_chart = df_base.groupby('Designation')['ProdTaken'].mean().reset_index()
-        conversion_chart['Conversion %'] = conversion_chart['ProdTaken'] * 100
-        st.line_chart(data=conversion_chart, x='Designation', y='Conversion %')
